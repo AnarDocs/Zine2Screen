@@ -5,17 +5,17 @@
 # Function to install packages on Debian/Ubuntu
 install_debian() {
     sudo apt update
-    sudo apt install -y poppler-utils imagemagick
+    sudo apt install -y poppler-utils imagemagick ghostscript
 }
 
 # Function to install packages on Redhat/Fedora
 install_redhat() {
-    sudo yum install -y poppler-utils ImageMagick
+    sudo yum install -y poppler-utils ImageMagick ghostscript
 }
 
 # Function to install packages on MacOS
 install_macos() {
-    brew install poppler imagemagick
+    brew install poppler imagemagick ghostscript
 }
 
 # Detect the operating system
