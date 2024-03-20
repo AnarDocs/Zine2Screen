@@ -7,6 +7,7 @@ Convert Imposed PDFs (Zine Booklet) to Pagnated PDF & Images
 
 Usage:
 ```
+chmod +x zine2screen.sh
 ./zine2screen zine.pdf <- output to zine_output
 ./zine2screen zine.pdf zinescreen <- output to zinescreen
 ./zine2screen zine.pdf -r 300 <- 300 dpi (default is 150)
