@@ -28,3 +28,17 @@ Run the `dependencies.sh` script, or ...
 * MacOs - brew install poppler imagemagick ghostscript
 
 Some Zine resources ...
+
+**Error**
+
+If you get the error "attempt to perform an operation not allowed by the security policy"
+
+This is due to an ImageMagick security policy (which only really applies if you are using ImageMagick on a web server)
+
+If you are happy to disable this then become root / superuser and type the following -
+
+```
+for file in `convert -list policy | grep "Path:" | grep -v built | sed 's/Path: \(.*\)/\1/g'`; do sed -i 's/domain="coder" rights="none" pattern="PDF"/domain="coder" rights="read|write" pattern="PDF"/g' $file; done
+```
+
+Otherwise, consider using [img2pdf](https://pypi.org/project/img2pdf/)
