@@ -10,7 +10,7 @@ Usage:
 chmod +x zine2screen.sh
 ./zine2screen zine.pdf <- output to zine_output
 ./zine2screen zine.pdf zinescreen <- output to zinescreen
-./zine2screen zine.pdf -r 300 <- 300 dpi (default is 150)
+./zine2screen -r300 zine.pdf <- 300 dpi (default is 150)
 ```
 
 Page images are outputed to ./zine_output/images
