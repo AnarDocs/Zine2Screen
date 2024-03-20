@@ -23,8 +23,8 @@ To use this script on Linux, MacOS or Windows (WSL)
 
 Run the `dependencies.sh` script, or ...
 
-* Debian / Ubuntu - sudo apt install -y poppler-utils imagemagick
-* Redhat / Fedora - sudo yum install -y poppler-utils ImageMagick
-* MacOs - brew install poppler imagemagick
+* Debian / Ubuntu - sudo apt install -y poppler-utils imagemagick ghostscript
+* Redhat / Fedora - sudo yum install -y poppler-utils ImageMagick ghostscript
+* MacOs - brew install poppler imagemagick ghostscript
 
 Some Zine resources ...
