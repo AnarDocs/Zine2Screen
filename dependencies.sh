@@ -5,7 +5,7 @@
 # Function to install packages on Debian/Ubuntu
 install_debian() {
     sudo apt update
-    sudo apt install -y poppler-utils imagemagick ghostscript
+    sudo apt install -y poppler-utils imagemagick ghostscript img2pdf
 }
 
 # Function to install packages on Redhat/Fedora
@@ -15,7 +15,7 @@ install_redhat() {
 
 # Function to install packages on MacOS
 install_macos() {
-    brew install poppler imagemagick ghostscript
+    brew install poppler imagemagick ghostscript img2pdf
 }
 
 # Detect the operating system
