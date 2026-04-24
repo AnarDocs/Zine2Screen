@@ -14,8 +14,8 @@ Use `bookWiz` for quick conversions, or call the individual scripts directly for
 
 ```bash
 ./bookWiz -tobook     input.pdf [output.pdf] [flip] [half]  # reading-order → imposed booklet
-./bookWiz -totrifold  input.pdf [output.pdf] [half]          # 6 reading-order pages → trifold
-./bookWiz -tofourfold input.pdf [output.pdf] [half]          # 4 reading-order pages → fourfold
+./bookWiz -totrifold  input.pdf [output.pdf]                # 6 reading-order pages → trifold
+./bookWiz -tofourfold input.pdf [output.pdf]                # 4 reading-order pages → fourfold
 ./bookWiz -frombook   input.pdf [output.pdf]                 # imposed booklet → reading-order
 ./bookWiz -fromscan   input.pdf [output.pdf]                 # scanned spreads → reading-order
 ./bookWiz -scan2book  input.pdf [output.pdf] [flip]          # scanned spreads → imposed booklet
@@ -23,7 +23,7 @@ Use `bookWiz` for quick conversions, or call the individual scripts directly for
 
 Add `flip` at the end to rotate even-numbered sheets 180° for short-edge duplex printers (booklet only).
 
-Add `half` to scale pages down by 1/√2 before imposition — use when your content is one size up from what you want to print (A4 content → A5 booklet pages, A5 content → A6 fourfold panels, etc.).
+Add `half` to scale pages down by 1/2 before imposition — use when your content is one size up from what you want to print (A4 content → A5 booklet pages, A5 content → A6 fourfold panels, etc.).
 
 ---
 
