@@ -5,12 +5,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
     echo "Usage:"
-    echo "  bookWiz -tobook   input.pdf [output.pdf] [flip]   Reading-order pages → imposed booklet"
-    echo "  bookWiz -frombook input.pdf [output.pdf]          Imposed booklet → reading-order pages"
-    echo "  bookWiz -fromscan input.pdf [output.pdf]          Scanned spreads → reading-order pages"
-    echo "  bookWiz -scan2book input.pdf [output.pdf] [flip]  Scanned spreads → imposed booklet"
+    echo "  bookWiz -tobook     input.pdf [output.pdf] [flip] [half]  Reading-order pages → imposed booklet"
+    echo "  bookWiz -totrifold  input.pdf [output.pdf] [half]         6 reading-order pages → trifold layout"
+    echo "  bookWiz -tofourfold input.pdf [output.pdf] [half]         4 reading-order pages → fourfold layout"
+    echo "  bookWiz -frombook   input.pdf [output.pdf]                Imposed booklet → reading-order pages"
+    echo "  bookWiz -fromscan   input.pdf [output.pdf]                Scanned spreads → reading-order pages"
+    echo "  bookWiz -scan2book  input.pdf [output.pdf] [flip]         Scanned spreads → imposed booklet"
     echo ""
-    echo "  flip   Rotate odd sheets 180° for short-edge duplex printers"
+    echo "  flip   Rotate odd sheets 180° for short-edge duplex printers (booklet only)"
+    echo "  half   Scale pages down by 1/√2 before imposition (A4→A5, A5→A6, etc.)"
     exit 1
 }
 
@@ -30,10 +33,12 @@ fi
 stem=$(basename "$input" .pdf)
 output=""
 flip=false
+half=false
 
 for arg in "$@"; do
     case "$arg" in
         flip|-flip) flip=true ;;
+        half|-half) half=true ;;
         *.pdf)      output="$arg" ;;
         *)          echo "Unknown argument: $arg"; usage ;;
     esac
@@ -43,10 +48,27 @@ case "$command" in
 
     -tobook)
         output="${output:-${stem}-booklet.pdf}"
-        flip_arg=""
+        flip_arg=""; half_arg=""
         [ "$flip" == "true" ] && flip_arg="--flip-even"
+        [ "$half" == "true" ] && half_arg="--half"
         echo "Converting $input → imposed booklet → $output"
-        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" $flip_arg
+        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" --format booklet $flip_arg $half_arg
+        ;;
+
+    -totrifold)
+        output="${output:-${stem}-trifold.pdf}"
+        half_arg=""
+        [ "$half" == "true" ] && half_arg="--half"
+        echo "Converting $input → trifold → $output"
+        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" --format trifold $half_arg
+        ;;
+
+    -tofourfold)
+        output="${output:-${stem}-fourfold.pdf}"
+        half_arg=""
+        [ "$half" == "true" ] && half_arg="--half"
+        echo "Converting $input → fourfold → $output"
+        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" --format fourfold $half_arg
         ;;
 
     -frombook)

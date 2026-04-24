@@ -13,13 +13,17 @@ Tools for converting zine and booklet PDFs between print and screen formats — 
 Use `bookWiz` for quick conversions, or call the individual scripts directly for more control.
 
 ```bash
-./bookWiz -tobook   input.pdf [output.pdf] [flip]   # reading-order → imposed booklet
-./bookWiz -frombook input.pdf [output.pdf]           # imposed booklet → reading-order
-./bookWiz -fromscan input.pdf [output.pdf]           # scanned spreads → reading-order
-./bookWiz -scan2book input.pdf [output.pdf] [flip]   # scanned spreads → imposed booklet
+./bookWiz -tobook     input.pdf [output.pdf] [flip] [half]  # reading-order → imposed booklet
+./bookWiz -totrifold  input.pdf [output.pdf] [half]          # 6 reading-order pages → trifold
+./bookWiz -tofourfold input.pdf [output.pdf] [half]          # 4 reading-order pages → fourfold
+./bookWiz -frombook   input.pdf [output.pdf]                 # imposed booklet → reading-order
+./bookWiz -fromscan   input.pdf [output.pdf]                 # scanned spreads → reading-order
+./bookWiz -scan2book  input.pdf [output.pdf] [flip]          # scanned spreads → imposed booklet
 ```
 
-Add `flip` at the end to rotate even-numbered sheets 180° for short-edge duplex printers.
+Add `flip` at the end to rotate even-numbered sheets 180° for short-edge duplex printers (booklet only).
+
+Add `half` to scale pages down by 1/√2 before imposition — use when your content is one size up from what you want to print (A4 content → A5 booklet pages, A5 content → A6 fourfold panels, etc.).
 
 ---
 
@@ -99,20 +103,70 @@ Works on macOS and Linux. Windows is not supported (WSL may work).
 
 ---
 
-## screen2zine.py — reading-order PDF → printable booklet
+## screen2zine.py — reading-order PDF → printable layout
 
-Imposes a reading-order PDF as a saddle-stitch booklet. Pages are arranged so that when printed double-sided, folded, and stapled, they read in the correct sequence. Works directly with PDF vectors — no rasterisation, no quality loss.
+Imposes a reading-order PDF for printing. Works directly with PDF vectors — no rasterisation, no quality loss. Supports three formats via `--format`:
+
+### Booklet (default)
+
+Saddle-stitch imposition. Pages are arranged so that when printed double-sided, folded, and stapled, they read in the correct sequence. Page count is padded to a multiple of 4.
 
 ```bash
 python screen2zine.py input.pdf
-python screen2zine.py input.pdf -o booklet.pdf
+python screen2zine.py input.pdf -o booklet.pdf --format booklet
 python screen2zine.py input.pdf --binding-margin 36 --outer-margin 18
 python screen2zine.py input.pdf --flip-even
 ```
 
-Margins are in PDF points (1pt = 1/72 inch ≈ 0.35mm). Defaults: binding edge 36pt (~12mm), outer/top/bottom edge 18pt (~6mm). The page count is automatically padded to a multiple of 4 with blank pages if necessary.
+`--binding-margin` (default 36pt ≈ 12mm): extra space at the spine edge. `--outer-margin` (default 18pt ≈ 6mm): space at all outer edges. `--flip-even` rotates even-numbered output sheets 180° for short-edge duplex printers.
 
-`--flip-even` rotates even-numbered output sheets 180° (the back side of each physical sheet). Use this when printing on a duplex printer that flips on the short edge — without it, the back of each sheet comes out upside down.
+### Trifold
+
+Letter fold (bi-folded): 6 panels across two sides of a single sheet. Outputs a 2-page PDF — front and back. Input pages are arranged as:
+
+```
+Front side (page 1 of output): 5 | 6 | 1
+Back side  (page 2 of output): 2 | 3 | 4
+```
+
+Page count is padded to a multiple of 6.
+
+```bash
+python screen2zine.py input.pdf --format trifold
+python screen2zine.py input.pdf --format trifold --outer-margin 0
+```
+
+### Fourfold
+
+Quarter fold (folded twice: once horizontally, once vertically): 4 pages on one side of a single sheet. Outputs a 1-page PDF. Page 4 is rotated 180° so it reads correctly after folding.
+
+```
+Top-left:     page 1  (right way up)
+Top-right:    page 4  (upside down)
+Bottom-left:  page 2  (right way up)
+Bottom-right: page 3  (right way up)
+```
+
+Page count is padded to a multiple of 4.
+
+```bash
+python screen2zine.py input.pdf --format fourfold
+python screen2zine.py input.pdf --format fourfold --outer-margin 0
+```
+
+Works with A4 or Letter input — layout is based on the input page dimensions, not fixed sizes.
+
+### Scaling with --half
+
+Add `--half` to any format to scale every page down by 1/√2 before imposition. This steps down one size in the ISO A series (A4→A5, A5→A6), so the imposed output fits on a sheet one size up from the finished piece.
+
+```bash
+python screen2zine.py input.pdf --format booklet --half    # A4 content → A5 booklet on A4 sheet
+python screen2zine.py input.pdf --format trifold --half    # A4 content → A5 trifold panels
+python screen2zine.py input.pdf --format fourfold --half   # A5 content → A6 fourfold panels on A5 sheet
+```
+
+Letter-size content doesn't share the exact √2 ratio of the ISO A series, but most printer apps will scale to fit when printing.
 
 ---
 

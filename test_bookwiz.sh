@@ -63,6 +63,16 @@ if require python3; then
         "Reading-order → imposed booklet (flip odd)" \
         "$OUT/straight_a5-booklet-flip.pdf" \
         -tobook "$SCRIPT_DIR/examples/straight_a5.pdf" "$OUT/straight_a5-booklet-flip.pdf" flip
+
+    run_test \
+        "Reading-order → trifold (4 pages, pads to 6)" \
+        "$OUT/straight_a5-trifold.pdf" \
+        -totrifold "$SCRIPT_DIR/examples/straight_a5_6page.pdf" "$OUT/straight_a5-trifold.pdf"
+
+    run_test \
+        "Reading-order → fourfold" \
+        "$OUT/straight_a5-fourfold.pdf" \
+        -tofourfold "$SCRIPT_DIR/examples/straight_a5.pdf" "$OUT/straight_a5-fourfold.pdf"
 fi
 
 # ── Tests requiring poppler (pdftoppm, pdfinfo) + ImageMagick ────────────────

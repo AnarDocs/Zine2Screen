@@ -79,13 +79,61 @@ def make_spread_pdf(path, spreads):
     print(f"  ✓ {path.name}")
 
 
+def make_straight_a4_8page(path):
+    c = canvas.Canvas(str(path), pagesize=A4)
+    for n in range(1, 9):
+        w, h = A4
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(15 * mm, h - 20 * mm, f"Page {n}")
+        c.setLineWidth(0.5)
+        c.line(15 * mm, h - 23 * mm, w - 15 * mm, h - 23 * mm)
+        c.setFont("Helvetica", 9)
+        text = c.beginText(15 * mm, h - 32 * mm)
+        text.setLeading(14)
+        for word_pos in range(0, len(LOREM), 80):
+            text.textLine(LOREM[word_pos:word_pos + 80])
+        c.drawText(text)
+        c.setFont("Helvetica", 8)
+        c.drawCentredString(w / 2, 10 * mm, str(n))
+        c.showPage()
+    c.save()
+    print(f"  ✓ {path.name}")
+
+
+def make_straight_a5_6page(path):
+    c = canvas.Canvas(str(path), pagesize=A5)
+    for n in range(1, 7):
+        w, h = A5
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(15 * mm, h - 20 * mm, f"Page {n}")
+        c.setLineWidth(0.5)
+        c.line(15 * mm, h - 23 * mm, w - 15 * mm, h - 23 * mm)
+        c.setFont("Helvetica", 9)
+        text = c.beginText(15 * mm, h - 32 * mm)
+        text.setLeading(14)
+        for word_pos in range(0, len(LOREM), 80):
+            text.textLine(LOREM[word_pos:word_pos + 80])
+        c.drawText(text)
+        c.setFont("Helvetica", 8)
+        c.drawCentredString(w / 2, 10 * mm, str(n))
+        c.showPage()
+    c.save()
+    print(f"  ✓ {path.name}")
+
+
 if __name__ == "__main__":
     print("Creating examples...")
 
     # 1. Straight A5
     make_straight_a5(OUT / "straight_a5.pdf")
 
-    # 2. Imposed booklet order: [p4|p1], [p2|p3]
+    # 2. Straight A4 eight-pager
+    make_straight_a4_8page(OUT / "straight_a4_8page.pdf")
+
+    # 3. Straight A5 six-pager (for trifold testing)
+    make_straight_a5_6page(OUT / "straight_a5_6page.pdf")
+
+    # 3. Imposed booklet order: [p4|p1], [p2|p3]
     make_spread_pdf(OUT / "imposed_booklet.pdf", [(3, 0), (1, 2)])
 
     # 3. Scanned / reading-order spreads: [p1|p2], [p3|p4]
