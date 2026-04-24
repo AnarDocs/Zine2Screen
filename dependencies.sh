@@ -10,7 +10,8 @@ install_debian() {
 
 # Function to install packages on Redhat/Fedora
 install_redhat() {
-    sudo yum install -y poppler-utils ImageMagick ghostscript
+    sudo yum install -y poppler-utils ImageMagick ghostscript pdftk
+    pip install img2pdf
 }
 
 # Function to install packages on MacOS

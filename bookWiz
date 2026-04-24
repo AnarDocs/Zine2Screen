@@ -1,0 +1,83 @@
+#!/bin/bash
+# bookWiz — PDF booklet conversion wrapper
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+    echo "Usage:"
+    echo "  bookWiz -tobook   input.pdf [output.pdf] [flip]   Reading-order pages → imposed booklet"
+    echo "  bookWiz -frombook input.pdf [output.pdf]          Imposed booklet → reading-order pages"
+    echo "  bookWiz -fromscan input.pdf [output.pdf]          Scanned spreads → reading-order pages"
+    echo "  bookWiz -scan2book input.pdf [output.pdf] [flip]  Scanned spreads → imposed booklet"
+    echo ""
+    echo "  flip   Rotate odd sheets 180° for short-edge duplex printers"
+    exit 1
+}
+
+if [ $# -lt 2 ]; then
+    usage
+fi
+
+command="$1"
+input="$2"
+shift 2
+
+if [ ! -f "$input" ]; then
+    echo "Error: Input file not found: $input"
+    exit 1
+fi
+
+stem=$(basename "$input" .pdf)
+output=""
+flip=false
+
+for arg in "$@"; do
+    case "$arg" in
+        flip|-flip) flip=true ;;
+        *.pdf)      output="$arg" ;;
+        *)          echo "Unknown argument: $arg"; usage ;;
+    esac
+done
+
+case "$command" in
+
+    -tobook)
+        output="${output:-${stem}-booklet.pdf}"
+        flip_arg=""
+        [ "$flip" == "true" ] && flip_arg="--flip-even"
+        echo "Converting $input → imposed booklet → $output"
+        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" $flip_arg
+        ;;
+
+    -frombook)
+        output="${output:-${stem}-screen.pdf}"
+        echo "Converting $input → reading order → $output"
+        "$SCRIPT_DIR/zine2screen.sh" -o "$output" "$input"
+        ;;
+
+    -fromscan)
+        output="${output:-${stem}-screen.pdf}"
+        echo "Converting $input → reading order → $output"
+        tmp_dir=$(mktemp -d)
+        "$SCRIPT_DIR/splitSpread.sh" -c "-o=${tmp_dir}" "$input"
+        mv "${tmp_dir}/${stem}-compiled.pdf" "$output"
+        rm -rf "$tmp_dir"
+        ;;
+
+    -scan2book)
+        output="${output:-${stem}-booklet.pdf}"
+        flip_arg=""
+        [ "$flip" == "true" ] && flip_arg="--flip-even"
+        echo "Converting $input → split → impose → $output"
+        tmp_dir=$(mktemp -d)
+        "$SCRIPT_DIR/splitSpread.sh" -c "-o=${tmp_dir}" "$input"
+        python3 "$SCRIPT_DIR/screen2zine.py" "${tmp_dir}/${stem}-compiled.pdf" -o "$output" $flip_arg
+        rm -rf "$tmp_dir"
+        ;;
+
+    *)
+        echo "Unknown command: $command"
+        usage
+        ;;
+
+esac

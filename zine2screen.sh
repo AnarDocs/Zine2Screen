@@ -14,10 +14,11 @@ command -v convert >/dev/null 2>&1 || { echo >&2 "ImageMagick is required but no
 command -v gs >/dev/null 2>&1 || { echo >&2 "Ghostscript is required but not installed. Aborting."; exit 1; }
 command -v img2pdf >/dev/null 2>&1 || { echo >&2 "Img2PDF is missing but may be needed."; }
 
-# Parse command-line resolution option
-while getopts ":r:" opt; do
+# Parse command-line options
+while getopts ":r:o:" opt; do
   case $opt in
     r) resolution=$OPTARG ;;
+    o) output_pdf=$OPTARG ;;
     \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
   esac
 done
@@ -25,11 +26,12 @@ shift $((OPTIND-1))
 
 # Check if the correct number of arguments are provided
 if [ -z "$1" ]; then
-  echo "Usage: $0 input_pdf output_directory"
+  echo "Usage: $0 [-r DPI] [-o output.pdf] input_pdf [images_directory]"
   exit 1
 fi
 
 input_pdf="$1"
+input_stem=$(basename "${input_pdf%.*}")
 output_dir="$2"
 
 # If output directory is not provided, create one based on PDF name
@@ -107,30 +109,29 @@ echo "Booklet page arrangement: ${ordered_page_numbers[@]}"
 l=0
 for png_file in "${output_dir}"/*.png; do
     filename=$(basename "$png_file")
-    page_number=$(echo "$filename" | cut -d'-' -f2 | cut -d'.' -f1)
-    convert "$png_file" -crop 50%x100% +repage "${output_dir}/${filename%.*}_%d.png" 
-    echo "Splitting PDF page $page_number"
-    # could convert as it finds latest filename?
-    rm "$png_file"  # Remove the original PNG file after splitting
-    ((l++))    
+    convert "$png_file" -crop 50%x100% +repage "${output_dir}/${filename%.*}_%d.png"
+    echo "Splitting PDF page $((l + 1))"
+    rm "$png_file"
+    ((l++))
 done
 
 echo "Reordering PNG pages into booklet order"
 # Reorder the pages
 i=0
 for page in "${output_dir}"/*.png; do
-    mv "$page" "${output_dir}/${input_pdf%.*}-screen-page_${ordered_page_numbers[i]}.png"
+    mv "$page" "${output_dir}/${input_stem}-screen-page_${ordered_page_numbers[i]}.png"
     echo "Reordered page exported: $((i + 1)) of ${booklet_pages} (no. ${ordered_page_numbers[i]})"
     ((i++))
 done
 
 # Convert images to PDF
 echo "Converting booklet images to screen PDF"
+output_pdf="${output_pdf:-${input_pdf%.*}-screen.pdf}"
 if command -v img2pdf &>/dev/null; then
-    img2pdf -o "${input_pdf%.*}-screen.pdf" "${output_dir}"/*.png
+    img2pdf -o "$output_pdf" "${output_dir}"/*.png
 else
     # Convert PNG files to PDF using ImageMagick - doesn't work with default policy
-    convert -density $resolution "${output_dir}/*.png" "${input_pdf%.*}-screen.pdf"
+    convert -density $resolution "${output_dir}"/*.png "$output_pdf"
 fi
 
 echo "Conversion and reordering complete."
