@@ -7,6 +7,7 @@ Tools for converting zine and booklet PDFs between print and screen formats — 
 | `screen2zine.py` | Reading-order single pages | Imposed booklet, ready to print |
 | `zine2screen.sh` | Imposed booklet (print order) | Reading-order single pages |
 | `splitSpread.sh` | 2-page spreads (any order) | Individual pages, or reimposed |
+| `imposeConvert.sh` | Imposed booklet (any format) | Same booklet rescaled to A4 or Letter |
 
 ## Common tasks
 
@@ -16,9 +17,11 @@ Use `bookWiz` for quick conversions, or call the individual scripts directly for
 ./bookWiz -tobook     input.pdf [output.pdf] [flip] [half]  # reading-order → imposed booklet
 ./bookWiz -totrifold  input.pdf [output.pdf]                # 6 reading-order pages → trifold
 ./bookWiz -tofourfold input.pdf [output.pdf]                # 4 reading-order pages → fourfold
-./bookWiz -frombook   input.pdf [output.pdf]                 # imposed booklet → reading-order
-./bookWiz -fromscan   input.pdf [output.pdf]                 # scanned spreads → reading-order
-./bookWiz -scan2book  input.pdf [output.pdf] [flip]          # scanned spreads → imposed booklet
+./bookWiz -frombook   input.pdf [output.pdf]                # imposed booklet → reading-order
+./bookWiz -fromscan   input.pdf [output.pdf]                # scanned spreads → reading-order
+./bookWiz -scan2book  input.pdf [output.pdf] [flip]         # scanned spreads → imposed booklet
+./bookWiz -toA4       input.pdf [output.pdf]                # rescale Letter-imposed booklet → A4
+./bookWiz -toLetter   input.pdf [output.pdf]                # rescale A4-imposed booklet → Letter
 ```
 
 Add `flip` at the end to rotate even-numbered sheets 180° for short-edge duplex printers (booklet only).
@@ -64,6 +67,18 @@ python screen2zine.py myzine-compiled.pdf
 ./splitSpread.sh -x=1,4 myzine.pdf
 # → individual files for spreads 1 and 4 only
 ```
+
+**I have an A4-imposed booklet but need to print it on Letter paper (or vice versa)**
+```bash
+./bookWiz -toLetter myzine-booklet.pdf
+# → myzine-booklet-letter.pdf
+
+./bookWiz -toA4 myzine-booklet.pdf
+# → myzine-booklet-A4.pdf
+```
+Alternatively: `./imposeConvert.sh -toLetter myzine-booklet.pdf`
+
+Each sheet is scaled uniformly to fit the target paper and centred. A4 and Letter are close in size (~3–6% scale change), so content will be slightly smaller but the margins will remain proportional.
 
 Example files for each format are in the `examples/` directory.
 
@@ -231,5 +246,21 @@ for file in `convert -list policy | grep "Path:" | grep -v built | sed 's/Path: 
 ```
 
 Or install `img2pdf` as an alternative (recommended — it's already used automatically if present).
+
+---
+
+## imposeConvert.sh — rescale an imposed booklet between A4 and Letter
+
+Takes an already-imposed booklet PDF and rescales every sheet to fit a different paper size. Works directly with PDF vectors — no rasterisation. A4 and Letter are close in size (≈3–6% scale change), so the output is visually identical.
+
+```bash
+./imposeConvert.sh -toA4     input.pdf               # → input-A4.pdf
+./imposeConvert.sh -toLetter input.pdf               # → input-letter.pdf
+./imposeConvert.sh -toA4     input.pdf output.pdf    # explicit output path
+```
+
+Each sheet is scaled uniformly (preserving aspect ratio) and centred on the target paper. Can also be called via `bookWiz -toA4` / `bookWiz -toLetter`.
+
+---
 
 Note: This compiles together 3 different tools I created for similar purposes

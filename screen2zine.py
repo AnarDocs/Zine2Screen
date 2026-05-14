@@ -191,6 +191,25 @@ def impose_fourfold(pages, page_count, outer, paper="auto"):
     return writer
 
 
+def convert_paper(pages, page_count, target_paper):
+    """Rescale each sheet to fit a target paper size, centred."""
+    tw, th = _landscape(target_paper)
+    writer = PdfWriter()
+    for page in pages:
+        pw = float(page.mediabox.width)
+        ph = float(page.mediabox.height)
+        scale = min(tw / pw, th / ph)
+        tx = (tw - pw * scale) / 2
+        ty = (th - ph * scale) / 2
+        new_page = PageObject.create_blank_page(width=tw, height=th)
+        new_page.merge_transformed_page(
+            page, Transformation().scale(scale, scale).translate(tx, ty)
+        )
+        writer.add_page(new_page)
+    print(f"Done — {page_count} sheet(s) converted to {target_paper}")
+    return writer
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Impose a reading-order PDF for printing."
@@ -226,6 +245,13 @@ def main():
             + ". 'auto' snaps to the smallest standard size that fits the spread."
         ),
     )
+    parser.add_argument(
+        "--convert-to", choices=list(PAPER_SIZES_PT), metavar="SIZE",
+        help=(
+            "Rescale an already-imposed PDF to a different paper size "
+            "(skips imposition; use with -o to set output path)."
+        ),
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -240,6 +266,13 @@ def main():
     reader = PdfReader(str(input_path))
     pages = list(reader.pages)
     page_count = len(pages)
+
+    if args.convert_to:
+        writer = convert_paper(pages, page_count, args.convert_to)
+        with open(output_path, "wb") as f:
+            writer.write(f)
+        print(f"→ {output_path}")
+        return
 
     if args.half:
         factor = 1 / math.sqrt(2)

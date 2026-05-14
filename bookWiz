@@ -11,6 +11,8 @@ usage() {
     echo "  bookWiz -frombook   input.pdf [output.pdf]                Imposed booklet → reading-order pages"
     echo "  bookWiz -fromscan   input.pdf [output.pdf]                Scanned spreads → reading-order pages"
     echo "  bookWiz -scan2book  input.pdf [output.pdf] [flip]         Scanned spreads → imposed booklet"
+    echo "  bookWiz -toA4       input.pdf [output.pdf]                Rescale Letter-imposed booklet → A4"
+    echo "  bookWiz -toLetter   input.pdf [output.pdf]                Rescale A4-imposed booklet → Letter"
     echo ""
     echo "  flip   Rotate odd sheets 180° for short-edge duplex printers (booklet only)"
     echo "  half   Scale pages down by 1/√2 before imposition (A4→A5, A5→A6, etc.)"
@@ -95,6 +97,18 @@ case "$command" in
         "$SCRIPT_DIR/splitSpread.sh" -c "-o=${tmp_dir}" "$input"
         python3 "$SCRIPT_DIR/screen2zine.py" "${tmp_dir}/${stem}-compiled.pdf" -o "$output" --binding-margin 0 --outer-margin 0 $flip_arg
         rm -rf "$tmp_dir"
+        ;;
+
+    -toA4)
+        output="${output:-${stem}-A4.pdf}"
+        echo "Converting $input → A4 imposed → $output"
+        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" --convert-to A4
+        ;;
+
+    -toLetter)
+        output="${output:-${stem}-letter.pdf}"
+        echo "Converting $input → Letter imposed → $output"
+        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" --convert-to letter
         ;;
 
     *)
