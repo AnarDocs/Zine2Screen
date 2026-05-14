@@ -28,10 +28,15 @@ _PAPER_BY_AREA = sorted(PAPER_SIZES_PT, key=lambda n: _landscape(n)[0] * _landsc
 
 
 def _auto_paper(need_w, need_h):
-    """Smallest standard landscape paper that fits need_w × need_h."""
+    """Smallest standard landscape paper that fits need_w × need_h.
+
+    A 1pt tolerance absorbs sub-millimetre rounding differences in source PDFs
+    without misidentifying genuinely different paper sizes.
+    """
+    tol = 1.0
     for name in _PAPER_BY_AREA:
         sw, sh = _landscape(name)
-        if sw >= need_w and sh >= need_h:
+        if sw + tol >= need_w and sh + tol >= need_h:
             return sw, sh
     return need_w, need_h
 
@@ -191,19 +196,39 @@ def impose_fourfold(pages, page_count, outer, paper="auto"):
     return writer
 
 
-def convert_paper(pages, page_count, target_paper):
-    """Rescale each sheet to fit a target paper size, centred."""
+def convert_paper(pages, page_count, target_paper, scale_up=0.0):
+    """Rescale each sheet to fit a target paper size, centred.
+
+    scale_up > 0 scales above the fit baseline, clipping into outer margins
+    rather than adding white space.  Any overflow is outside the MediaBox and
+    gets trimmed naturally by the printer.
+
+    Handles portrait-stored landscape sheets (ph > pw, with or without /Rotate)
+    by rotating the content into landscape before scaling.
+    """
     tw, th = _landscape(target_paper)
     writer = PdfWriter()
     for page in pages:
         pw = float(page.mediabox.width)
         ph = float(page.mediabox.height)
-        scale = min(tw / pw, th / ph)
-        tx = (tw - pw * scale) / 2
-        ty = (th - ph * scale) / 2
+        rotation = int(page.get('/Rotate', 0) or 0) % 360
+
+        if rotation in (90, 270) or (rotation == 0 and ph > pw):
+            # Portrait-stored landscape sheet — rotate into landscape first.
+            # rotate(-90) then translate(0, pw) maps (x,y) → (y, -x+pw),
+            # turning the portrait box (0..pw × 0..ph) into landscape (0..ph × 0..pw).
+            eff_w, eff_h = ph, pw
+            base_t = Transformation().rotate(-90).translate(0, pw)
+        else:
+            eff_w, eff_h = pw, ph
+            base_t = Transformation()
+
+        scale = min(tw / eff_w, th / eff_h) * (1 + scale_up / 100)
+        tx = (tw - eff_w * scale) / 2
+        ty = (th - eff_h * scale) / 2
         new_page = PageObject.create_blank_page(width=tw, height=th)
         new_page.merge_transformed_page(
-            page, Transformation().scale(scale, scale).translate(tx, ty)
+            page, base_t.scale(scale, scale).translate(tx, ty)
         )
         writer.add_page(new_page)
     print(f"Done — {page_count} sheet(s) converted to {target_paper}")
@@ -252,6 +277,13 @@ def main():
             "(skips imposition; use with -o to set output path)."
         ),
     )
+    parser.add_argument(
+        "--scale-up", type=float, default=0.0, metavar="PCT",
+        help=(
+            "With --convert-to: scale up by this %% above the fit baseline, "
+            "clipping into outer margins rather than adding white space (default: 0)."
+        ),
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -268,7 +300,7 @@ def main():
     page_count = len(pages)
 
     if args.convert_to:
-        writer = convert_paper(pages, page_count, args.convert_to)
+        writer = convert_paper(pages, page_count, args.convert_to, args.scale_up)
         with open(output_path, "wb") as f:
             writer.write(f)
         print(f"→ {output_path}")

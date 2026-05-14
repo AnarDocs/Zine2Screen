@@ -80,6 +80,11 @@ Alternatively: `./imposeConvert.sh -toLetter myzine-booklet.pdf`
 
 Each sheet is scaled uniformly to fit the target paper and centred. A4 and Letter are close in size (~3–6% scale change), so content will be slightly smaller but the margins will remain proportional.
 
+If the result looks too small, use `--scale-up` to scale above the fit baseline — any overflow clips into the outer margins rather than actual content:
+```bash
+./imposeConvert.sh -toLetter myzine-booklet.pdf --scale-up=10
+```
+
 Example files for each format are in the `examples/` directory.
 
 ---
@@ -254,12 +259,13 @@ Or install `img2pdf` as an alternative (recommended — it's already used automa
 Takes an already-imposed booklet PDF and rescales every sheet to fit a different paper size. Works directly with PDF vectors — no rasterisation. A4 and Letter are close in size (≈3–6% scale change), so the output is visually identical.
 
 ```bash
-./imposeConvert.sh -toA4     input.pdf               # → input-A4.pdf
-./imposeConvert.sh -toLetter input.pdf               # → input-letter.pdf
-./imposeConvert.sh -toA4     input.pdf output.pdf    # explicit output path
+./imposeConvert.sh -toA4     input.pdf                          # → input-A4.pdf
+./imposeConvert.sh -toLetter input.pdf                          # → input-letter.pdf
+./imposeConvert.sh -toLetter input.pdf output.pdf               # explicit output path
+./imposeConvert.sh -toLetter input.pdf --scale-up=10            # scale 10% above fit baseline
 ```
 
-Each sheet is scaled uniformly (preserving aspect ratio) and centred on the target paper. Can also be called via `bookWiz -toA4` / `bookWiz -toLetter`.
+Each sheet is scaled uniformly (preserving aspect ratio) and centred on the target paper. `--scale-up=N` scales N% above the fit baseline, clipping into outer margins rather than adding white space — useful when the content has internal margins and the default fit looks too small. Can also be called via `bookWiz -toA4` / `bookWiz -toLetter`.
 
 ---
 
