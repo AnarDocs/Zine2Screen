@@ -52,7 +52,7 @@ case "$command" in
         [ "$flip" == "true" ] && flip_arg="--flip-even"
         [ "$half" == "true" ] && half_arg="--half"
         echo "Converting $input → imposed booklet → $output"
-        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" --format booklet $flip_arg $half_arg
+        python3 "$SCRIPT_DIR/screen2zine.py" "$input" -o "$output" --format booklet --binding-margin 0 --outer-margin 0 $flip_arg $half_arg
         ;;
 
     -totrifold)
@@ -93,7 +93,7 @@ case "$command" in
         echo "Converting $input → split → impose → $output"
         tmp_dir=$(mktemp -d)
         "$SCRIPT_DIR/splitSpread.sh" -c "-o=${tmp_dir}" "$input"
-        python3 "$SCRIPT_DIR/screen2zine.py" "${tmp_dir}/${stem}-compiled.pdf" -o "$output" $flip_arg
+        python3 "$SCRIPT_DIR/screen2zine.py" "${tmp_dir}/${stem}-compiled.pdf" -o "$output" --binding-margin 0 --outer-margin 0 $flip_arg
         rm -rf "$tmp_dir"
         ;;
 

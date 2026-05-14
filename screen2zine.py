@@ -7,6 +7,49 @@ import sys
 from pathlib import Path
 from pypdf import PdfReader, PdfWriter, PageObject, Transformation
 
+# Portrait dimensions in points (width × height)
+PAPER_SIZES_PT = {
+    "A2": (1190.55, 1683.78),
+    "A3": (841.89, 1190.55),
+    "A4": (595.276, 841.89),
+    "A5": (419.528, 595.276),
+    "A6": (297.638, 419.528),
+    "letter": (612.0, 792.0),
+    "legal": (612.0, 1008.0),
+    "tabloid": (792.0, 1224.0),
+}
+def _landscape(name):
+    w, h = PAPER_SIZES_PT[name]
+    return (max(w, h), min(w, h))
+
+
+# All sizes sorted smallest-area-first for auto-paper selection
+_PAPER_BY_AREA = sorted(PAPER_SIZES_PT, key=lambda n: _landscape(n)[0] * _landscape(n)[1])
+
+
+def _auto_paper(need_w, need_h):
+    """Smallest standard landscape paper that fits need_w × need_h."""
+    for name in _PAPER_BY_AREA:
+        sw, sh = _landscape(name)
+        if sw >= need_w and sh >= need_h:
+            return sw, sh
+    return need_w, need_h
+
+
+def _resolve_paper(paper, need_w, need_h):
+    if paper == "auto":
+        return _auto_paper(need_w, need_h)
+    if paper not in PAPER_SIZES_PT:
+        sys.exit(f"Error: unknown paper size '{paper}'. Choose from: {', '.join(PAPER_SIZES_PT)}")
+    sw, sh = _landscape(paper)
+    if sw < need_w or sh < need_h:
+        print(
+            f"Warning: content ({need_w:.1f}×{need_h:.1f} pt) overflows {paper} "
+            f"({sw:.1f}×{sh:.1f} pt) — pages will be clipped.",
+            file=sys.stderr,
+        )
+    return sw, sh
+
 
 def _blank(pages):
     return PageObject.create_blank_page(
@@ -15,7 +58,7 @@ def _blank(pages):
     )
 
 
-def impose_booklet(pages, page_count, binding, outer, flip_even):
+def impose_booklet(pages, page_count, binding, outer, flip_even, paper="auto"):
     while len(pages) % 4 != 0:
         pages.append(_blank(pages))
 
@@ -23,8 +66,18 @@ def impose_booklet(pages, page_count, binding, outer, flip_even):
     page_w = float(pages[0].mediabox.width)
     page_h = float(pages[0].mediabox.height)
 
-    sheet_w = (page_w + binding + outer) * 2
-    sheet_h = page_h + outer * 2
+    # Raw spread dimensions: outer + page + binding*2 + page + outer
+    raw_w = (page_w + binding + outer) * 2
+    raw_h = page_h + outer * 2
+
+    sheet_w, sheet_h = _resolve_paper(paper, raw_w, raw_h)
+
+    # Centre the content block within the (potentially larger) sheet
+    x_pad = (sheet_w - raw_w) / 2
+    y_pad = (sheet_h - raw_h) / 2
+    left_x = x_pad + outer
+    right_x = x_pad + outer + page_w + binding * 2
+    y_offset = y_pad + outer
 
     pairs = []
     lo, hi = 0, total - 1
@@ -40,8 +93,8 @@ def impose_booklet(pages, page_count, binding, outer, flip_even):
     writer = PdfWriter()
     for left_idx, right_idx in pairs:
         sheet = PageObject.create_blank_page(width=sheet_w, height=sheet_h)
-        sheet.merge_transformed_page(pages[left_idx], Transformation().translate(outer, outer))
-        sheet.merge_transformed_page(pages[right_idx], Transformation().translate(page_w + outer + binding * 2, outer))
+        sheet.merge_transformed_page(pages[left_idx], Transformation().translate(left_x, y_offset))
+        sheet.merge_transformed_page(pages[right_idx], Transformation().translate(right_x, y_offset))
         writer.add_page(sheet)
 
     if flip_even:
@@ -55,7 +108,7 @@ def impose_booklet(pages, page_count, binding, outer, flip_even):
     return writer
 
 
-def impose_trifold(pages, page_count, outer):
+def impose_trifold(pages, page_count, outer, paper="auto"):
     """
     Trifold (letter fold): 6 panels across 2 sides of a single sheet.
     Front side: panels 5, 6, 1  (indices 4, 5, 0)
@@ -66,14 +119,21 @@ def impose_trifold(pages, page_count, outer):
 
     page_w = float(pages[0].mediabox.width)
     page_h = float(pages[0].mediabox.height)
-    sheet_w = page_w * 3 + outer * 2
-    sheet_h = page_h + outer * 2
+    raw_w = page_w * 3 + outer * 2
+    raw_h = page_h + outer * 2
+
+    sheet_w, sheet_h = _resolve_paper(paper, raw_w, raw_h)
+    x_pad = (sheet_w - raw_w) / 2
+    y_pad = (sheet_h - raw_h) / 2
 
     writer = PdfWriter()
     for panel_indices in ([4, 5, 0], [1, 2, 3]):
         sheet = PageObject.create_blank_page(width=sheet_w, height=sheet_h)
         for col, idx in enumerate(panel_indices):
-            sheet.merge_transformed_page(pages[idx], Transformation().translate(outer + col * page_w, outer))
+            sheet.merge_transformed_page(
+                pages[idx],
+                Transformation().translate(x_pad + outer + col * page_w, y_pad + outer),
+            )
         writer.add_page(sheet)
 
     padded = len(pages) - page_count
@@ -82,7 +142,7 @@ def impose_trifold(pages, page_count, outer):
     return writer
 
 
-def impose_fourfold(pages, page_count, outer):
+def impose_fourfold(pages, page_count, outer, paper="auto"):
     """
     Fourfold (quarter fold): 4 pages on one side of a single sheet.
     Layout when flat:
@@ -96,24 +156,30 @@ def impose_fourfold(pages, page_count, outer):
 
     page_w = float(pages[0].mediabox.width)
     page_h = float(pages[0].mediabox.height)
-    sheet_w = page_w * 2 + outer * 2
-    sheet_h = page_h * 2 + outer * 2
+    raw_w = page_w * 2 + outer * 2
+    raw_h = page_h * 2 + outer * 2
+
+    sheet_w, sheet_h = _resolve_paper(paper, raw_w, raw_h)
+    x_pad = (sheet_w - raw_w) / 2
+    y_pad = (sheet_h - raw_h) / 2
+    ox = x_pad + outer
+    oy = y_pad + outer
 
     sheet = PageObject.create_blank_page(width=sheet_w, height=sheet_h)
 
     # Bottom-left: page 2
-    sheet.merge_transformed_page(pages[1], Transformation().translate(outer, outer))
+    sheet.merge_transformed_page(pages[1], Transformation().translate(ox, oy))
     # Bottom-right: page 3
-    sheet.merge_transformed_page(pages[2], Transformation().translate(outer + page_w, outer))
+    sheet.merge_transformed_page(pages[2], Transformation().translate(ox + page_w, oy))
     # Top-left: page 1
-    sheet.merge_transformed_page(pages[0], Transformation().translate(outer, outer + page_h))
+    sheet.merge_transformed_page(pages[0], Transformation().translate(ox, oy + page_h))
     # Top-right: page 4, rotated 180° so it reads correctly after folding.
     # Rotation is about the origin, so after rotate(180) the content sits in negative
-    # space; translating by (outer + 2*page_w, outer + 2*page_h) brings it into the
+    # space; translating by (ox + 2*page_w, oy + 2*page_h) brings it into the
     # top-right cell of the sheet.
     sheet.merge_transformed_page(
         pages[3],
-        Transformation().rotate(180).translate(outer + 2 * page_w, outer + 2 * page_h)
+        Transformation().rotate(180).translate(ox + 2 * page_w, oy + 2 * page_h)
     )
 
     writer = PdfWriter()
@@ -151,6 +217,15 @@ def main():
         "--half", action="store_true",
         help="Scale each page down by 1/√2 before imposition (A4→A5, A5→A6, etc.)"
     )
+    parser.add_argument(
+        "--paper", default="auto",
+        metavar="SIZE",
+        help=(
+            "Target output paper size: auto (default), or one of "
+            + ", ".join(PAPER_SIZES_PT)
+            + ". 'auto' snaps to the smallest standard size that fits the spread."
+        ),
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -172,11 +247,11 @@ def main():
             page.scale_by(factor)
 
     if args.format == "booklet":
-        writer = impose_booklet(pages, page_count, args.binding_margin, args.outer_margin, args.flip_even)
+        writer = impose_booklet(pages, page_count, args.binding_margin, args.outer_margin, args.flip_even, args.paper)
     elif args.format == "trifold":
-        writer = impose_trifold(pages, page_count, args.outer_margin)
+        writer = impose_trifold(pages, page_count, args.outer_margin, args.paper)
     else:
-        writer = impose_fourfold(pages, page_count, args.outer_margin)
+        writer = impose_fourfold(pages, page_count, args.outer_margin, args.paper)
 
     with open(output_path, "wb") as f:
         writer.write(f)
